@@ -227,7 +227,7 @@ class PasswordResetHandler(BaseHandler):
         verified_code = self.db.user.encrypt(0, [user['id'], verified_code])
         verified_code = base64.b64encode(verified_code)
 
-        future = utils.send_mail(to=user['email'], subject=u"签到(qiandao.today) 密码重置", html=u"""
+        future = utils.send_mail(to=user['email'], subject=u"签到(%s) 密码重置" % (config.domain), html=u"""
 
         <h1 style="margin-left: 30px;">签到<sup>alpha</sup></h1>
 
