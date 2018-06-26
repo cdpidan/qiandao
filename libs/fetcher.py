@@ -196,6 +196,8 @@ class Fetcher(object):
             connections = "0",
             pageref = "page_0",
             )
+        if response.body and 'image' in response.headers.get('content-type'):
+            entry['response']['content']['decoded'] = base64.b64encode(response.body)
         return entry
 
     @staticmethod
@@ -208,6 +210,8 @@ class Fetcher(object):
             if _from == 'content':
                 if content[0] == -1:
                     content[0] = utils.decode(response.body)
+                if 'image' in response.headers.get('content-type'):
+                    return base64.b64encode(response.body)
                 return content[0]
             elif _from == 'status':
                 return '%s' % response.code
