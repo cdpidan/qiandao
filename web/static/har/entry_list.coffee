@@ -22,6 +22,7 @@ define (require, exports, module) ->
         $scope.session = []
         $scope.setting = data.setting
         $scope.readonly = data.readonly or not HASUSER
+        $scope.is_check_all = true
 
         $scope.recommend()
         if (x for x in $scope.har.log.entries when x.recommend).length > 0
@@ -38,11 +39,35 @@ define (require, exports, module) ->
       $scope.$on('har-change', () ->
         $scope.save_change()
       )
-      $scope.save_change = utils.debounce((() ->
+      $scope.save_change_storage = utils.debounce((() ->
         if ($scope.filename and not $scope.readonly)
           console.debug('local saved')
           utils.storage.set('har_har', $scope.har)
       ), 1000)
+
+      $scope.save_change = ()->
+        $scope.update_checked_status()
+        $scope.save_change_storage()
+
+      $scope.update_checked_status = utils.debounce((() ->
+        no_checked = (()->
+          for e in $scope.har.log.entries when !e.checked
+            return e
+        )()
+        $scope.is_check_all = no_checked == undefined
+        $scope.$apply();
+      ), 1)
+
+      $scope.check_all = () ->
+        $scope.is_check_all = !$scope.is_check_all;
+        for entry in $scope.har.log.entries when entry.checked != $scope.is_check_all
+          entry.checked = $scope.is_check_all
+        $scope.save_change_storage()
+
+      $scope.inverse = ()->
+        for entry in $scope.har.log.entries
+          entry.checked = !entry.checked
+        $scope.save_change_storage()
 
       $scope.status_label = (status) ->
         if status // 100 == 2
