@@ -22,7 +22,8 @@ define (require, exports, module) ->
         $scope.session = []
         $scope.setting = data.setting
         $scope.readonly = data.readonly or not HASUSER
-        $scope.is_check_all = true
+        $scope.is_check_all = false
+        $scope.update_checked_status()
 
         $scope.recommend()
         if (x for x in $scope.har.log.entries when x.recommend).length > 0

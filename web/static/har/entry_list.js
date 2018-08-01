@@ -19,7 +19,8 @@
         $scope.session = [];
         $scope.setting = data.setting;
         $scope.readonly = data.readonly || !HASUSER;
-        $scope.is_check_all = true;
+        $scope.is_check_all = false;
+        $scope.update_checked_status();
         $scope.recommend();
         if (((function() {
           var i, len, ref, results;
