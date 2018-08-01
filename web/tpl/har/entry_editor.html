@@ -41,10 +41,7 @@
           <dt>Request Method</dt>
           <dd contenteditable data-ph="request method" ng-model="entry.request.method"></dd>
           <dt>Request Comment</dt>
-          <dd>
-            <div class="contentedit-wrapper" ng-bind-html="variables_wrapper(entry.comment, 'comment')"></div>
-            <div contenteditable style="display: none" ng-model="entry.comment"></div>
-          </dd>
+          <dd contenteditable data-ph="request comment" ng-model="entry.comment"></dd>
         </dl>
 
         <!-- query string -->
