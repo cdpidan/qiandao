@@ -12,17 +12,19 @@ define (require, exports, module) ->
   angular.module('entry_editor', [
     'contenteditable'
   ]).controller('EntryCtrl', ($scope, $rootScope, $sce, $http) ->
-    # init
+# init
     $scope.panel = 'request'
+    $scope.copy_entry = null
 
     # on edit event
     $scope.$on('edit-entry', (ev, entry) ->
       console.info(entry)
 
       $scope.entry = entry
-      $scope.entry.success_asserts ?= [{re: ''+$scope.entry.response.status, from: 'status'}, ]
+      $scope.entry.success_asserts ?= [{re: '' + $scope.entry.response.status, from: 'status'},]
       $scope.entry.failed_asserts ?= []
       $scope.entry.extract_variables ?= []
+      $scope.copy_entry = JSON.parse(utils.storage.get('copy_request'))
 
       angular.element('#edit-entry').modal('show')
       $scope.alert_hide()
@@ -32,14 +34,14 @@ define (require, exports, module) ->
     angular.element('#edit-entry').on('hidden.bs.modal', (ev) ->
       if $scope.panel in ['preview-headers', 'preview']
         $scope.$apply ->
-            $scope.panel = 'test'
+          $scope.panel = 'test'
 
-            # update env from extract_variables
-            env = utils.list2dict($scope.env)
-            for rule in $scope.entry.extract_variables
-              if ret = $scope.preview_match(rule.re, rule.from)
-                env[rule.name] = ret
-            $scope.env = utils.dict2list(env)
+          # update env from extract_variables
+          env = utils.list2dict($scope.env)
+          for rule in $scope.entry.extract_variables
+            if ret = $scope.preview_match(rule.re, rule.from)
+              env[rule.name] = ret
+          $scope.env = utils.dict2list(env)
 
       $scope.$apply ->
         $scope.preview = undefined
@@ -104,18 +106,23 @@ define (require, exports, module) ->
           return
 
     # variables template
-    $scope.variables_wrapper = (string, place_holder='') ->
+    $scope.variables_wrapper = (string, place_holder = '') ->
       string = (string or place_holder).toString()
       re = /{{\s*([\w]+)[^}]*?\s*}}/g
       $sce.trustAsHtml(string.replace(re, '<span class="label label-primary">$&</span>'))
 
-    $scope.add_request = (pos) ->
+    $scope.insert_request = (pos, entry)->
       pos ?= 1
       if (current_pos = $scope.$parent.har.log.entries.indexOf($scope.entry)) == -1
         $scope.alert "can't find position to add request"
         return
       current_pos += pos
-      $scope.$parent.har.log.entries.splice(current_pos, 0, {
+      $scope.$parent.har.log.entries.splice(current_pos, 0, entry)
+      $rootScope.$broadcast('har-change')
+      angular.element('#edit-entry').modal('hide')
+
+    $scope.add_request = (pos) ->
+      $scope.insert_request(pos, {
         checked: false
         pageref: $scope.entry.pageref
         recommend: true
@@ -128,8 +135,40 @@ define (require, exports, module) ->
           cookies: []
         response: {}
       })
-      $rootScope.$broadcast('har-change')
-      angular.element('#edit-entry').modal('hide')
+
+    $scope.add_delay_request = ()->
+      $scope.insert_request(1, {
+        checked: true
+        pageref: $scope.entry.pageref
+        recommend: true,
+        comment: '延时3秒'
+        request:
+          method: 'GET'
+          url: location.origin + '/util/delay/3'
+          postData:
+            test: ''
+          headers: []
+          cookies: []
+        response: {}
+        success_asserts: [
+          {re: "200", from: "status"}
+        ]
+      })
+
+    $scope.copy_request = ()->
+      if not $scope.entry
+        $scope.alert "can't find position to paste request"
+        return
+      $scope.copy_entry = angular.copy($scope.entry)
+      utils.storage.set('copy_request', angular.toJson($scope.copy_entry))
+
+    $scope.paste_request = (pos)->
+      $scope.copy_entry.comment ?= '';
+      $scope.copy_entry.comment = 'Copy_' + $scope.copy_entry.comment
+      $scope.copy_entry.pageref = $scope.entry.pageref
+      $scope.insert_request(pos, $scope.copy_entry)
+      utils.storage.del('copy_request')
+      $scope.copy_entry = null;
 
     # fetch test
     $scope.do_test = () ->
@@ -186,7 +225,7 @@ define (require, exports, module) ->
             content.decoded = atob(content.text)
           data = content.decoded
         else if from == 'status'
-          data = ''+$scope.preview.response.status
+          data = '' + $scope.preview.response.status
         else if from.indexOf('header-') == 0
           from = from[7..]
           for header in $scope.preview.response.headers
@@ -217,5 +256,5 @@ define (require, exports, module) ->
             return if m[1] then m[1] else m[0]
           return null
 
-      ## eof
-    )
+## eof
+  )

@@ -8,6 +8,7 @@
     return angular.module('entry_editor', ['contenteditable']).controller('EntryCtrl', function($scope, $rootScope, $sce, $http) {
       var changing;
       $scope.panel = 'request';
+      $scope.copy_entry = null;
       $scope.$on('edit-entry', function(ev, entry) {
         var base, base1, base2;
         console.info(entry);
@@ -26,6 +27,7 @@
         if ((base2 = $scope.entry).extract_variables == null) {
           base2.extract_variables = [];
         }
+        $scope.copy_entry = JSON.parse(utils.storage.get('copy_request'));
         angular.element('#edit-entry').modal('show');
         return $scope.alert_hide();
       });
@@ -127,7 +129,7 @@
         re = /{{\s*([\w]+)[^}]*?\s*}}/g;
         return $sce.trustAsHtml(string.replace(re, '<span class="label label-primary">$&</span>'));
       };
-      $scope.add_request = function(pos) {
+      $scope.insert_request = function(pos, entry) {
         var current_pos;
         if (pos == null) {
           pos = 1;
@@ -137,7 +139,12 @@
           return;
         }
         current_pos += pos;
-        $scope.$parent.har.log.entries.splice(current_pos, 0, {
+        $scope.$parent.har.log.entries.splice(current_pos, 0, entry);
+        $rootScope.$broadcast('har-change');
+        return angular.element('#edit-entry').modal('hide');
+      };
+      $scope.add_request = function(pos) {
+        return $scope.insert_request(pos, {
           checked: false,
           pageref: $scope.entry.pageref,
           recommend: true,
@@ -152,8 +159,49 @@
           },
           response: {}
         });
-        $rootScope.$broadcast('har-change');
-        return angular.element('#edit-entry').modal('hide');
+      };
+      $scope.add_delay_request = function() {
+        return $scope.insert_request(1, {
+          checked: true,
+          pageref: $scope.entry.pageref,
+          recommend: true,
+          comment: '延时3秒',
+          request: {
+            method: 'GET',
+            url: location.origin + '/util/delay/3',
+            postData: {
+              test: ''
+            },
+            headers: [],
+            cookies: []
+          },
+          response: {},
+          success_asserts: [
+            {
+              re: "200",
+              from: "status"
+            }
+          ]
+        });
+      };
+      $scope.copy_request = function() {
+        if (!$scope.entry) {
+          $scope.alert("can't find position to paste request");
+          return;
+        }
+        $scope.copy_entry = angular.copy($scope.entry);
+        return utils.storage.set('copy_request', angular.toJson($scope.copy_entry));
+      };
+      $scope.paste_request = function(pos) {
+        var base;
+        if ((base = $scope.copy_entry).comment == null) {
+          base.comment = '';
+        }
+        $scope.copy_entry.comment = 'Copy_' + $scope.copy_entry.comment;
+        $scope.copy_entry.pageref = $scope.entry.pageref;
+        $scope.insert_request(pos, $scope.copy_entry);
+        utils.storage.del('copy_request');
+        return $scope.copy_entry = null;
       };
       return $scope.do_test = function() {
         var c, h, ref, ref1;
