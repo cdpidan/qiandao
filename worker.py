@@ -17,6 +17,8 @@ from libs import utils
 from libs.fetcher import Fetcher
 
 logger = logging.getLogger('qiandao.worker')
+
+
 class MainWorker(object):
     def __init__(self):
         self.running = False
@@ -31,6 +33,7 @@ class MainWorker(object):
             tpl = db.TPLDB()
             task = db.TaskDB()
             tasklog = db.TaskLogDB()
+
         self.db = DB
         self.fetcher = Fetcher()
 
@@ -38,12 +41,14 @@ class MainWorker(object):
         if self.running:
             return
         self.running = self.run()
+
         def done(future):
             self.running = None
             success, failed = future.result()
             if success or failed:
-                logger.info('%d task done. %d success, %d failed' % (success+failed, success, failed))
+                logger.info('%d task done. %d success, %d failed' % (success + failed, success, failed))
             return
+
         self.running.add_done_callback(done)
 
     @gen.coroutine
@@ -74,7 +79,10 @@ class MainWorker(object):
             logging.exception(e)
         raise gen.Return((success, failed))
 
-    scan_fields = ('id', 'tplid', 'userid', 'init_env', 'env', 'session', 'last_success', 'last_failed', 'success_count', 'failed_count', 'last_failed_count', 'next', 'disabled', )
+    scan_fields = (
+    'id', 'tplid', 'userid', 'init_env', 'env', 'session', 'last_success', 'last_failed', 'success_count',
+    'failed_count', 'last_failed_count', 'next', 'disabled',)
+
     def scan(self):
         return self.db.task.scan(fields=self.scan_fields)
 
@@ -100,7 +108,7 @@ class MainWorker(object):
         return next
 
     @staticmethod
-    def fix_next_time(next, gmt_offset=-8*60):
+    def fix_next_time(next, gmt_offset=-8 * 60):
         date = datetime.datetime.utcfromtimestamp(next)
         local_date = date - datetime.timedelta(minutes=gmt_offset)
         if local_date.hour < 2:
@@ -110,7 +118,7 @@ class MainWorker(object):
         return next
 
     @staticmethod
-    def is_tommorrow(next, gmt_offset=-8*60):
+    def is_tommorrow(next, gmt_offset=-8 * 60):
         date = datetime.datetime.utcfromtimestamp(next)
         now = datetime.datetime.utcnow()
         local_date = date - datetime.timedelta(minutes=gmt_offset)
@@ -128,7 +136,7 @@ class MainWorker(object):
     def do(self, task):
         user = self.db.user.get(task['userid'], fields=('id', 'email', 'email_verified', 'nickname'))
         tpl = self.db.tpl.get(task['tplid'], fields=('id', 'userid', 'sitename', 'siteurl', 'tpl',
-            'interval', 'last_success'))
+                                                     'interval', 'last_success'))
 
         if task['disabled']:
             self.db.tasklog.add(task['id'], False, msg='task disabled.')
@@ -154,34 +162,35 @@ class MainWorker(object):
         try:
             fetch_tpl = self.db.user.decrypt(0 if not tpl['userid'] else task['userid'], tpl['tpl'])
             env = dict(
-                    variables = self.db.user.decrypt(task['userid'], task['init_env']),
-                    session = [],
-                    )
+                variables=self.db.user.decrypt(task['userid'], task['init_env']),
+                session=[],
+            )
 
             new_env = yield self.fetcher.do_fetch(fetch_tpl, env)
 
             variables = self.db.user.encrypt(task['userid'], new_env['variables'])
             session = self.db.user.encrypt(task['userid'],
-                    new_env['session'].to_json() if hasattr(new_env['session'], 'to_json') else new_env['session'])
+                                           new_env['session'].to_json() if hasattr(new_env['session'], 'to_json') else
+                                           new_env['session'])
 
             # todo next not mid night
-            next = time.time() + max((tpl['interval'] if tpl['interval'] else 24 * 60 * 60), 30*60)
+            next = task.get('next', time.time()) + max((tpl['interval'] if tpl['interval'] else 24 * 60 * 60), 30 * 60)
             if tpl['interval'] is None:
                 next = self.fix_next_time(next)
 
             # success feedback
             self.db.tasklog.add(task['id'], success=True, msg=new_env['variables'].get('__log__'))
             self.db.task.mod(task['id'],
-                    last_success=time.time(),
-                    last_failed_count=0,
-                    success_count=task['success_count']+1,
-                    env=variables,
-                    session=session,
-                    mtime=time.time(),
-                    next=next)
+                             last_success=time.time(),
+                             last_failed_count=0,
+                             success_count=task['success_count'] + 1,
+                             env=variables,
+                             session=session,
+                             mtime=time.time(),
+                             next=next)
             self.db.tpl.incr_success(tpl['id'])
 
-            logger.info('taskid:%d tplid:%d successed! %.4fs', task['id'], task['tplid'], time.time()-start)
+            logger.info('taskid:%d tplid:%d successed! %.4fs', task['id'], task['tplid'], time.time() - start)
         except Exception as e:
             # failed feedback
             next_time_delta = self.failed_count_to_time(task['last_failed_count'], tpl['interval'])
@@ -194,48 +203,49 @@ class MainWorker(object):
 
             self.db.tasklog.add(task['id'], success=False, msg=unicode(e))
             self.db.task.mod(task['id'],
-                    last_failed=time.time(),
-                    failed_count=task['failed_count']+1,
-                    last_failed_count=task['last_failed_count']+1,
-                    disabled = disabled,
-                    mtime = time.time(),
-                    next=next)
+                             last_failed=time.time(),
+                             failed_count=task['failed_count'] + 1,
+                             last_failed_count=task['last_failed_count'] + 1,
+                             disabled=disabled,
+                             mtime=time.time(),
+                             next=next)
             self.db.tpl.incr_failed(tpl['id'])
 
-            if task['success_count'] and task['last_failed_count'] and user['email_verified'] and user['email']\
+            if task['success_count'] and task['last_failed_count'] and user['email_verified'] and user['email'] \
                     and self.is_tommorrow(next):
                 try:
                     _ = yield utils.send_mail(to=user['email'], subject=u"%s - 签到失败%s" % (
                         tpl['sitename'], u' 已停止' if disabled else u""),
-                    text=u"""
+                                              text=u"""
 您的 %(sitename)s [ %(siteurl)s ] 签到任务，执行 %(cnt)d次 失败。%(disable)s
 
 下一次重试在一天之后，为防止签到中断，给您发送这份邮件。
 
 访问： http://%(domain)s/task/%(taskid)s/log 查看日志。
                     """ % dict(
-                        sitename=tpl['sitename'] or u'未命名',
-                        siteurl=tpl['siteurl'] or u'',
-                        cnt=task['last_failed_count'] + 1,
-                        disable=u"因连续多次失败，已停止。" if disabled else u"",
-                        domain=config.domain,
-                        taskid=task['id'],
-                        ), async=True)
+                                                  sitename=tpl['sitename'] or u'未命名',
+                                                  siteurl=tpl['siteurl'] or u'',
+                                                  cnt=task['last_failed_count'] + 1,
+                                                  disable=u"因连续多次失败，已停止。" if disabled else u"",
+                                                  domain=config.domain,
+                                                  taskid=task['id'],
+                                              ), async=True)
                 except Exception as e:
                     logging.error('send mail error: %r', e)
 
-            logger.error('taskid:%d tplid:%d failed! %r %.4fs', task['id'], task['tplid'], e, time.time()-start)
+            logger.error('taskid:%d tplid:%d failed! %r %.4fs', task['id'], task['tplid'], e, time.time() - start)
             raise gen.Return(False)
         raise gen.Return(True)
 
     def task_failed(self, task, user, tpl, e):
         pass
-        #if user['email'] and user['email_verified']:
-            #return utils.send_mail(to=user['email'],
-                    #subject=u"%s - 签到失败提醒" % (tpl['sitename']),
-                    #text=u"""
-                    #您在 签到.today ( http://qiandao.today )
-                    #""")
+        # if user['email'] and user['email_verified']:
+        # return utils.send_mail(to=user['email'],
+        # subject=u"%s - 签到失败提醒" % (tpl['sitename']),
+        # text=u"""
+        # 您在 签到.today ( http://qiandao.today )
+        # """)
+
 
 if __name__ == '__main__':
     tornado.log.enable_pretty_logging()
