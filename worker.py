@@ -80,8 +80,8 @@ class MainWorker(object):
         raise gen.Return((success, failed))
 
     scan_fields = (
-    'id', 'tplid', 'userid', 'init_env', 'env', 'session', 'last_success', 'last_failed', 'success_count',
-    'failed_count', 'last_failed_count', 'next', 'disabled',)
+        'id', 'tplid', 'userid', 'init_env', 'env', 'session', 'last_success', 'last_failed', 'success_count',
+        'failed_count', 'last_failed_count', 'next', 'disabled', 'stime',)
 
     def scan(self):
         return self.db.task.scan(fields=self.scan_fields)
@@ -174,8 +174,12 @@ class MainWorker(object):
                                            new_env['session'])
 
             # todo next not mid night
-            next = task.get('next', time.time()) + max((tpl['interval'] if tpl['interval'] else 24 * 60 * 60), 30 * 60)
-            if tpl['interval'] is None:
+            next = time.time() + max((tpl['interval'] if tpl['interval'] else 24 * 60 * 60), 30 * 60)
+
+            # 指定签到时间且是每天运行的任务
+            if task['stime'] and not tpl['interval']:
+                next = utils.get_sign_in_time(task['stime'], False)
+            elif tpl['interval'] is None:
                 next = self.fix_next_time(next)
 
             # success feedback
@@ -202,17 +206,12 @@ class MainWorker(object):
                 next = None
 
             self.db.tasklog.add(task['id'], success=False, msg=unicode(e))
-            self.db.task.mod(task['id'],
-                             last_failed=time.time(),
-                             failed_count=task['failed_count'] + 1,
-                             last_failed_count=task['last_failed_count'] + 1,
-                             disabled=disabled,
-                             mtime=time.time(),
-                             next=next)
             self.db.tpl.incr_failed(tpl['id'])
 
             if task['success_count'] and task['last_failed_count'] and user['email_verified'] and user['email'] \
                     and self.is_tommorrow(next):
+                if task['stime'] and not tpl['interval']:
+                    next = utils.get_sign_in_time(task['stime'], False)
                 try:
                     _ = yield utils.send_mail(to=user['email'], subject=u"%s - 签到失败%s" % (
                         tpl['sitename'], u' 已停止' if disabled else u""),
@@ -232,6 +231,14 @@ class MainWorker(object):
                                               ), async=True)
                 except Exception as e:
                     logging.error('send mail error: %r', e)
+
+            self.db.task.mod(task['id'],
+                             last_failed=time.time(),
+                             failed_count=task['failed_count'] + 1,
+                             last_failed_count=task['last_failed_count'] + 1,
+                             disabled=disabled,
+                             mtime=time.time(),
+                             next=next)
 
             logger.error('taskid:%d tplid:%d failed! %r %.4fs', task['id'], task['tplid'], e, time.time() - start)
             raise gen.Return(False)

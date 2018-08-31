@@ -47,10 +47,11 @@ def method_cache(fn):
 
     return wrapper
 
+
 import datetime
 
 
-def format_date(date, gmt_offset=-8*60, relative=True, shorter=False, full_format=False):
+def format_date(date, gmt_offset=-8 * 60, relative=True, shorter=False, full_format=False):
     """Formats the given date (which should be GMT).
 
     By default, we return a relative time (e.g., "2 minutes ago"). You
@@ -101,8 +102,8 @@ def format_date(date, gmt_offset=-8*60, relative=True, shorter=False, full_forma
         elif days == 1 and local_date.day == local_tomorrow.day and \
                 relative and later == u'后':
             format = u"明天" if shorter else u"明天 %(time)s"
-        #elif days < 5:
-            #format = "%(weekday)s" if shorter else "%(weekday)s %(time)s"
+        # elif days < 5:
+        # format = "%(weekday)s" if shorter else "%(weekday)s %(time)s"
         elif days < 334:  # 11mo, since confusing for same month last year
             format = "%(month_name)s-%(day)s" if shorter else \
                 "%(month_name)s-%(day)s %(time)s"
@@ -126,6 +127,7 @@ def utf8(string):
     if isinstance(string, unicode):
         return string.encode('utf8')
     return string
+
 
 import urllib
 import config
@@ -243,10 +245,12 @@ def quote_chinese(url, encodeing="utf-8"):
 
 
 import hashlib
+
 md5string = lambda x: hashlib.md5(utf8(x)).hexdigest()
 
-
 import random
+
+
 def get_random(min_num, max_mun, unit):
     random_num = random.uniform(min_num, max_mun)
     result = "%.{0}f".format(int(unit)) % random_num
@@ -254,6 +258,8 @@ def get_random(min_num, max_mun, unit):
 
 
 import datetime
+
+
 def get_date_time(date=True, time=True, time_difference=0):
     time_difference = time_difference + 12
     now_date = datetime.datetime.today() + datetime.timedelta(hours=time_difference)
@@ -268,7 +274,14 @@ def get_date_time(date=True, time=True, time_difference=0):
         return
 
 
+def get_sign_in_time(date_str='', today=True):
+    dt = datetime.datetime.now() if today else datetime.timedelta(days=1)
+    sign_time = '%s %s' % (dt.strftime("%Y-%m-%d"), date_str)
+    return time.mktime(time.strptime(sign_time, "%Y-%m-%d %H:%M:%S"))
+
+
 import time
+
 jinja_globals = {
     'md5': md5string,
     'quote_chinese': quote_chinese,
