@@ -274,10 +274,16 @@ def get_date_time(date=True, time=True, time_difference=0):
         return
 
 
-def get_sign_in_time(date_str='', today=True):
-    dt = datetime.datetime.now() if today else datetime.timedelta(days=1)
-    sign_time = '%s %s' % (dt.strftime("%Y-%m-%d"), date_str)
-    return time.mktime(time.strptime(sign_time, "%Y-%m-%d %H:%M:%S"))
+def get_sign_in_time(date_str='', next_time=None):
+    if not date_str:
+        return time.time()
+
+    if next_time:
+        date_res = date_str if isinstance(date_str, datetime.datetime) else \
+            datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        now = datetime.datetime.fromtimestamp(float(next_time))
+        date_str = '%s %s' % (now.strftime("%Y-%m-%d"), date_res.strftime("%H:%M:%S"))
+    return time.mktime(time.strptime(date_str, "%Y-%m-%d %H:%M:%S"))
 
 
 import time

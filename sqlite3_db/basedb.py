@@ -6,6 +6,7 @@
 # Created on 2012-08-30 17:43:49
 
 import logging
+
 logger = logging.getLogger('qiandao.basedb')
 
 import os
@@ -45,3 +46,14 @@ class BaseDB(_BaseDB):
             self.conn = sqlite3.connect(self.path, isolation_level=None)
             self.conn.text_factory = to_unicode
         return self.conn.cursor()
+
+    def _exists_column(self, table_schema, column_name, table_name=None):
+        row = self._execute("""select sql from sqlite_master where type = 'table' and name = '%s' """ % (
+                table_name or self.__tablename__))
+        res = [x[0] for x in row]
+        return len(res) > 0 and (('"%s"' % column_name) in res[0] or ('`%s`' % column_name) in res[0])
+
+    def _add_column(self, column_name, type_name, is_not_null=True, default_value='', table_name=None):
+        self._execute("ALTER TABLE `%s` ADD COLUMN `%s` %s %s %s" % (
+            table_name or self.__tablename__, column_name, type_name, 'NOT NULL' if is_not_null else 'NULL',
+            default_value))

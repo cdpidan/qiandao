@@ -13,7 +13,7 @@ class TaskDB(_TaskDB, BaseDB):
     def __init__(self, path=config.sqlite3.path):
         self.path = path
         self._execute('''CREATE TABLE IF NOT EXISTS `%s` (
-          `id` INTEGER PRIMARY KEY,
+          `id` INTEGER PRIMARY KEY AUTOINCREMENT,
           `tplid` INT UNSIGNED NOT NULL,
           `userid` INT UNSIGNED NOT NULL,
           `disabled` TINYINT(1) NOT NULL DEFAULT 0,
@@ -27,6 +27,7 @@ class TaskDB(_TaskDB, BaseDB):
           `last_failed_count` INT UNSIGNED NOT NULL DEFAULT 0,
           `next` INT UNSIGNED NULL DEFAULT NULL,
           `note` VARCHAR(256) NULL,
+          `stime` DATETIME NOT NULL,
           `ctime` INT UNSIGNED NOT NULL,
           `mtime` INT UNSIGNED NOT NULL
         )''' % self.__tablename__)
@@ -34,3 +35,6 @@ class TaskDB(_TaskDB, BaseDB):
         for each in ('userid', 'tplid'):
             self._execute('''CREATE INDEX IF NOT EXISTS `ix_%s_%s` ON %s (%s)''' % (
                 self.__tablename__, each, self.__tablename__, each))
+
+        if not self._exists_column('', 'stime'):
+            self._add_column('stime', 'DATETIME', False)

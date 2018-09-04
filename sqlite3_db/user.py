@@ -13,7 +13,7 @@ class UserDB(_UserDB, BaseDB):
     def __init__(self, path=config.sqlite3.path):
         self.path = path
         self._execute('''CREATE TABLE IF NOT EXISTS `%s` (
-          `id` INTEGER PRIMARY KEY,
+          `id` INTEGER PRIMARY KEY AUTOINCREMENT,
           `email` VARCHAR(256) NOT NULL,
           `email_verified` TINYINT(1) NOT NULL DEFAULT 0,
           `password` VARBINARY(128) NOT NULL,

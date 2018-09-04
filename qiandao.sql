@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS `qiandao`.`task` (
   `last_failed_count` INT UNSIGNED NOT NULL DEFAULT 0,
   `next` INT UNSIGNED NULL DEFAULT NULL,
   `note` VARCHAR(256) NULL,
-  `stime` VARCHAR(8) NULL,
+  `stime` DATETIME NULL,
   `ctime` INT UNSIGNED NOT NULL,
   `mtime` INT UNSIGNED NOT NULL,
   PRIMARY KEY (`id`),

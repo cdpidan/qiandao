@@ -160,6 +160,7 @@ class MainWorker(object):
 
         start = time.time()
         try:
+            print 1 / 0
             fetch_tpl = self.db.user.decrypt(0 if not tpl['userid'] else task['userid'], tpl['tpl'])
             env = dict(
                 variables=self.db.user.decrypt(task['userid'], task['init_env']),
@@ -174,12 +175,8 @@ class MainWorker(object):
                                            new_env['session'])
 
             # todo next not mid night
-            next = time.time() + max((tpl['interval'] if tpl['interval'] else 24 * 60 * 60), 30 * 60)
-
-            # 指定签到时间且是每天运行的任务
-            if task['stime'] and not tpl['interval']:
-                next = utils.get_sign_in_time(task['stime'], False)
-            elif tpl['interval'] is None:
+            next = task.get('next', time.time()) + max((tpl['interval'] if tpl['interval'] else 24 * 60 * 60), 30 * 60)
+            if tpl['interval'] is None:
                 next = self.fix_next_time(next)
 
             # success feedback
@@ -208,27 +205,30 @@ class MainWorker(object):
             self.db.tasklog.add(task['id'], success=False, msg=unicode(e))
             self.db.tpl.incr_failed(tpl['id'])
 
+            # 指定时间运行时，下一次运行不在当天的话根据指定的时间重新计算下次时间
+            next_result = next
+            if task['stime'] and self.is_tommorrow(next):
+                # next_result += (tpl['interval'] if tpl['interval'] else 24 * 60 * 60)
+                next_result = utils.get_sign_in_time(task['stime'], next)
+
             if task['success_count'] and task['last_failed_count'] and user['email_verified'] and user['email'] \
                     and self.is_tommorrow(next):
-                if task['stime'] and not tpl['interval']:
-                    next = utils.get_sign_in_time(task['stime'], False)
                 try:
                     _ = yield utils.send_mail(to=user['email'], subject=u"%s - 签到失败%s" % (
-                        tpl['sitename'], u' 已停止' if disabled else u""),
-                                              text=u"""
+                        tpl['sitename'], u' 已停止' if disabled else u""), text=u"""
 您的 %(sitename)s [ %(siteurl)s ] 签到任务，执行 %(cnt)d次 失败。%(disable)s
 
 下一次重试在一天之后，为防止签到中断，给您发送这份邮件。
 
 访问： http://%(domain)s/task/%(taskid)s/log 查看日志。
                     """ % dict(
-                                                  sitename=tpl['sitename'] or u'未命名',
-                                                  siteurl=tpl['siteurl'] or u'',
-                                                  cnt=task['last_failed_count'] + 1,
-                                                  disable=u"因连续多次失败，已停止。" if disabled else u"",
-                                                  domain=config.domain,
-                                                  taskid=task['id'],
-                                              ), async=True)
+                        sitename=tpl['sitename'] or u'未命名',
+                        siteurl=tpl['siteurl'] or u'',
+                        cnt=task['last_failed_count'] + 1,
+                        disable=u"因连续多次失败，已停止。" if disabled else u"",
+                        domain=config.domain,
+                        taskid=task['id'],
+                    ), async=True)
                 except Exception as e:
                     logging.error('send mail error: %r', e)
 
@@ -238,7 +238,7 @@ class MainWorker(object):
                              last_failed_count=task['last_failed_count'] + 1,
                              disabled=disabled,
                              mtime=time.time(),
-                             next=next)
+                             next=next_result)
 
             logger.error('taskid:%d tplid:%d failed! %r %.4fs', task['id'], task['tplid'], e, time.time() - start)
             raise gen.Return(False)

@@ -13,7 +13,7 @@ class PRDB(_PRDB, BaseDB):
     def __init__(self, path=config.sqlite3.path):
         self.path = path
         self._execute('''CREATE TABLE IF NOT EXISTS `%s` (
-          `id` INTEGER PRIMARY KEY,
+          `id` INTEGER PRIMARY KEY AUTOINCREMENT,
           `from_tplid` INT UNSIGNED NOT NULL,
           `from_userid` INT UNSIGNED NOT NULL,
           `to_tplid` INT UNSIGNED NULL,

@@ -48,8 +48,10 @@ class TaskNewHandler(BaseHandler):
         tpl = self.check_permission(self.db.tpl.get(tplid, fields=('id', 'userid', 'interval')))
 
         next_time = time.time()
+
+        # 如果设置了定时签到
         stime = self.get_body_argument('_binux_stime')
-        if stime and not tpl['interval']:
+        if stime:
             next_time = utils.get_sign_in_time(stime)
         elif not tested:
             next_time += 15
@@ -72,12 +74,18 @@ class TaskNewHandler(BaseHandler):
             else:
                 self.db.task.mod(taskid, note=note, next=next_time, stime=stime)
         else:
-            task = self.check_permission(self.db.task.get(taskid, fields=('id', 'userid', 'init_env')), 'w')
+            task = self.check_permission(self.db.task.get(taskid, fields=('id', 'userid', 'init_env', 'stime', 'next')),
+                                         'w')
 
             init_env = self.db.user.decrypt(user['id'], task['init_env'])
             init_env.update(env)
             init_env = self.db.user.encrypt(user['id'], init_env)
-            self.db.task.mod(taskid, init_env=init_env, env=None, session=None, note=note)
+
+            if task['stime'] and stime and time.mktime(task['stime'].timetuple()) != next_time:
+                task['next'] = next_time
+
+            self.db.task.mod(taskid, init_env=init_env, env=None, session=None, note=note, next=task['next'],
+                             stime=stime)
 
         # referer = self.request.headers.get('referer', '/my/')
         self.redirect('/my/')
@@ -130,8 +138,8 @@ class TaskRunHandler(BaseHandler):
             return
 
         next = time.time()
-        if task['stime'] and not tpl['interval']:
-            next = utils.get_sign_in_time(task['stime'])
+        if task['stime']:
+            next = utils.get_sign_in_time(task['stime'], time.time())
 
         self.db.tasklog.add(task['id'], success=True, msg=new_env['variables'].get('__log__'))
         self.db.task.mod(task['id'],

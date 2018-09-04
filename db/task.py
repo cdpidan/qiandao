@@ -27,6 +27,8 @@ class TaskDB(BaseDB):
         import mysql.connector
         self.conn = mysql.connector.connect(user=user, password=passwd, host=host, port=port,
                                             database=database, autocommit=True)
+        if not self._exists_column(database, 'stime'):
+            self._add_column('stime', 'DATETIME', False)
 
     def add(self, tplid, userid, env):
         now = time.time()
@@ -41,6 +43,7 @@ class TaskDB(BaseDB):
             success_count=0,
             failed_count=0,
             next=None,
+            stime=None,
             ctime=now,
             mtime=now,
         )

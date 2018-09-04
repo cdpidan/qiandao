@@ -18,6 +18,7 @@ cookie_days = 5
 mysql_url = urlparse.urlparse(os.getenv('JAWSDB_MARIA_URL', ''))
 redis_url = urlparse.urlparse(os.getenv('REDISCLOUD_URL', ''))
 
+
 class mysql(object):
     host = mysql_url.hostname or 'localhost'
     port = mysql_url.port or '3306'
@@ -25,11 +26,14 @@ class mysql(object):
     user = mysql_url.username or 'qiandao'
     passwd = mysql_url.password or None
 
+
 class sqlite3(object):
     path = './database.db'
 
+
 # 数据库类型，修改 sqlite3 为 mysql 使用 mysql
 db_type = os.getenv('DB_TYPE', 'sqlite3')
+
 
 # redis 连接参数，可选
 class redis(object):
@@ -37,13 +41,15 @@ class redis(object):
     port = redis_url.port or 6379
     passwd = redis_url.password or None
     db = int(os.getenv('REDIS_DB_INDEX', 1))
+
+
 evil = 100
 
 pbkdf2_iterations = 400
 aes_key = hashlib.sha256(os.getenv('AES_KEY', 'binux')).digest()
 cookie_secret = hashlib.sha256(os.getenv('COOKIE_SECRET', 'binux')).digest()
 check_task_loop = 10000
-download_size_limit = 1*1024*1024
+download_size_limit = 1 * 1024 * 1024
 proxies = []
 
 # 域名

@@ -23,9 +23,9 @@
     {% include "task_new_var.html" %}
   </div>
 
-  {% if not tpl.interval and current_user %}
+  {% if current_user %}
   <div class="form-group">
-    <label class="control-label" for="note">签到时间(格式：时:分:秒)</label>
+    <label class="control-label" for="note">签到时间(格式：年-月-日 时:分:秒, 如：2018-09-09 10:21:21)</label>
     <input type="text" class="form-control" name="_binux_stime" value="{{ task.stime or '' }}" id="stime">
   </div>
   {% endif %}
