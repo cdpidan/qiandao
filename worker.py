@@ -176,7 +176,9 @@ class MainWorker(object):
 
             # todo next not mid night
             next = task.get('next', time.time()) + max((tpl['interval'] if tpl['interval'] else 24 * 60 * 60), 30 * 60)
-            if tpl['interval'] is None:
+            if task['stime'] and self.is_tommorrow(next):
+                next = utils.get_sign_in_time(task['stime', next])
+            elif tpl['interval'] is None:
                 next = self.fix_next_time(next)
 
             # success feedback

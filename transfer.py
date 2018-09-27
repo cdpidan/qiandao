@@ -30,10 +30,10 @@ for task in source_task_db.list(user_id, fields="*"):
     user_id = task['userid']
 
     init_env = source_user_db.decrypt(user_id, task['init_env'])
+    print task_id, init_env, 'task ok...'
     init_env = target_user_db.encrypt(user_id, init_env)
 
     target_task_db.mod(task_id, init_env=init_env, env=None, session=None, note=task.get('note'))
-    print task_id, 'task ok...'
 
 tpl_list = source_tpl_db.list("*")
 for tpl in tpl_list:

@@ -81,7 +81,7 @@ class TaskNewHandler(BaseHandler):
             init_env.update(env)
             init_env = self.db.user.encrypt(user['id'], init_env)
 
-            if task['stime'] and stime and time.mktime(task['stime'].timetuple()) != next_time:
+            if stime and (not task['stime'] or time.mktime(task['stime'].timetuple()) != next_time):
                 task['next'] = next_time
 
             self.db.task.mod(taskid, init_env=init_env, env=None, session=None, note=note, next=task['next'],
