@@ -167,8 +167,6 @@ define (require, exports, module) ->
       $scope.copy_entry.comment = 'Copy_' + $scope.copy_entry.comment
       $scope.copy_entry.pageref = $scope.entry.pageref
       $scope.insert_request(pos, $scope.copy_entry)
-      utils.storage.del('copy_request')
-      $scope.copy_entry = null;
 
     # fetch test
     $scope.do_test = () ->
