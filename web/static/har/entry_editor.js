@@ -199,9 +199,7 @@
         }
         $scope.copy_entry.comment = 'Copy_' + $scope.copy_entry.comment;
         $scope.copy_entry.pageref = $scope.entry.pageref;
-        $scope.insert_request(pos, $scope.copy_entry);
-        utils.storage.del('copy_request');
-        return $scope.copy_entry = null;
+        return $scope.insert_request(pos, $scope.copy_entry);
       };
       return $scope.do_test = function() {
         var c, h, ref, ref1;
