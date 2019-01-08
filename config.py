@@ -42,7 +42,7 @@ evil = 100
 pbkdf2_iterations = 400
 aes_key = hashlib.sha256(os.getenv('AES_KEY', 'binux')).digest()
 cookie_secret = hashlib.sha256(os.getenv('COOKIE_SECRET', 'binux')).digest()
-check_task_loop = 10000
+check_task_loop = 10000   # callback is called every this milliseconds
 download_size_limit = 1*1024*1024
 proxies = []
 
@@ -52,6 +52,8 @@ domain = 'qiandao.today'
 # mailgun 邮件发送, 域名和 apikey
 mail_ssl = False
 mail_smtp = ""
+mail_port = 465
+mail_ssl = True
 mail_user = ""
 mail_password = ""
 mail_domain = "mail.qiandao.today"
